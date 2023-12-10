@@ -1,6 +1,7 @@
 ﻿using MagicVilla_VillaAPI.Data;
 using MagicVilla_VillaAPI.DTO;
 using MagicVilla_VillaAPI.Interface;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MagicVilla_VillaAPI.Controllers {
@@ -8,9 +9,11 @@ namespace MagicVilla_VillaAPI.Controllers {
     [ApiController]
     public class VillaController : Controller {
         private readonly IVillaRepository villaRepository;
+        private readonly ILogger logger;
 
-        public VillaController(IVillaRepository villaRepository) {
+        public VillaController(IVillaRepository villaRepository, ILogger<VillaController> logger) {
             this.villaRepository = villaRepository;
+            this.logger = logger;
         }
 
         [HttpGet]
@@ -86,12 +89,35 @@ namespace MagicVilla_VillaAPI.Controllers {
                 return BadRequest();
             }
             if (ModelState.IsValid) {
-
+                var villaToUpdate = VillaStore.villaList.FirstOrDefault(x => x.Id == id);
+                if (villaToUpdate == null) {
+                    return BadRequest();
+                }
                 VillaStore.villaList[VillaStore.villaList.FindIndex(x => x.Id == id)] = villa;
                 return NoContent();
             }
             else {
                 return BadRequest();
+            }
+        }
+
+        [HttpPatch("id")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public IActionResult UpdatePartialVilla(int id, JsonPatchDocument<VillaDTO> patch) {
+            if (patch == null || id == 0) {
+                return BadRequest();
+            }
+            if (ModelState.IsValid) {
+                var villaToUpdate = VillaStore.villaList.FirstOrDefault(x => x.Id == id);
+                if (villaToUpdate == null) {
+                    return BadRequest();
+                }
+                patch.ApplyTo(villaToUpdate, ModelState);
+                return NoContent();
+            }
+            else {
+                return BadRequest(ModelState);
             }
         }
     }
